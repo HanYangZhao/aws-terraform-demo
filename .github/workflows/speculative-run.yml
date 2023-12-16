@@ -45,7 +45,7 @@ jobs:
         id: upload
         with:
           workspace: ${{ env.TF_WORKSPACE }}
-          directory: "./components/deploy-vpc"
+          directory: "./components/vpc"
           speculative: true
 
       - uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
