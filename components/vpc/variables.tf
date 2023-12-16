@@ -18,9 +18,3 @@ variable "vpc" {
 
     }))
 }
-
-
-
-variable "region" {
-    type = string
-}
