@@ -23,7 +23,6 @@ env:
   TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }} ## Name of your existing Terraform Cloud Organization. RECOMMENDED: use repository variables. ex. "${{ vars.TF_CLOUD_ORGANIZATION }}"
   TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}" ## Terraform Cloud API Token. RECOMMENDED: replace with github action secrets. ex. "${{ secrets.TF_API_TOKEN }}"
   TF_WORKSPACE: ${{ vars.TF_WORKSPACE_VPC }} ## Name of your existing workspace in Terraform Cloud.
-  CONFIG_DIRECTORY: "./" ## Directory of your Terraform Configuration. Relative to the project root.
   ## Additional env variables
   TF_LOG: DEBUG ## Helpful for troubleshooting
   # TF_MAX_TIMEOUT: "30m" ## If you wish to override the default "1h"
@@ -43,7 +42,7 @@ jobs:
         id: upload
         with:
           workspace: ${{ env.TF_WORKSPACE }}
-          directory: ${{ env.CONFIG_DIRECTORY }}
+          directory: "./deploy-vpc"
           speculative: true
 
       - uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
