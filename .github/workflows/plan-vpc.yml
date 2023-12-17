@@ -24,4 +24,5 @@ jobs:
       tf_workspace: "aws-terraform-demo-vpc"
       tf_directory:  "components/vpc"
       tf_vars_directory: "deploy-vpc"
+    secrets:
       tf_api_token: ${{ secrets.TF_API_TOKEN }}
