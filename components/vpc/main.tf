@@ -10,7 +10,7 @@ locals {
 ################################################################################
 
 module "vpc" {
-  source     = "github.com/HanYangZhao/terraform-aws-vpc"
+  source     = "github.com/HanYangZhao/aws-terraform-vpc"
   for_each   = var.vpc
   create_vpc = each.value.deploy
   name       = each.key
