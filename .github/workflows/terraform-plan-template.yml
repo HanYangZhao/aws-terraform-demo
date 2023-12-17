@@ -6,12 +6,15 @@ on:
       tf_workspace:
         description: 'The Terraform Cloud workspace to run the plan in'
         required: true
+        type: string
       tf_vars_directory:
         description: 'The directory containing the Terraform var file'
         required: true
+        type: string
       tf_directory:
         description: 'The directory containing the Terraform configuration'
         required: true
+        type: string
 
 jobs:
   terraform-cloud-plan:
