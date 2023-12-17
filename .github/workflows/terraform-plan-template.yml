@@ -7,6 +7,10 @@ on:
         description: 'The Terraform Cloud workspace to run the plan in'
         required: true
         type: string
+      tf_cloud_org:
+        description: 'The Terraform Cloud org to run the plan in'
+        required: true
+        type: string
       tf_vars_directory:
         description: 'The directory containing the Terraform var file'
         required: true
@@ -22,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      TF_CLOUD_ORGANIZATION: ${{ inputs.TF_CLOUD_ORGANIZATION }}
       # TF_MAX_TIMEOUT: "30m" ## If you wish to override the default "1h"
     steps:
       - name: Checkout code
