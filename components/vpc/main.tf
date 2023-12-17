@@ -75,7 +75,7 @@ module "vpc" {
 
 module "vpc_endpoints" {
   for_each = module.vpc
-  source = "github.com/HanYangZhao/terraform-aws-vpc"
+  source = "github.com/HanYangZhao/aws-terraform-vpc-endpoints"
 
   vpc_id = each.value.vpc_id
 
@@ -138,11 +138,11 @@ module "vpc_endpoints" {
   })
 }
 
-module "vpc_endpoints_nocreate" {
-  source = "github.com/HanYangZhao/terraform-aws-vpc-endpoints"
+# module "vpc_endpoints_nocreate" {
+#   source = "github.com/HanYangZhao/terraform-aws-vpc-endpoints"
 
-  create = false
-}
+#   create = false
+# }
 
 ################################################################################
 # Supporting Resources
