@@ -17,12 +17,12 @@ module "vpc" {
   cidr = each.value.cidr
 
   azs                 = local.azs
-  private_subnets     = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k)] #/24, 251 addresses + 5 reserved
-  public_subnets      = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 4)] #/24, 251 addresses + 5 reserved
-  database_subnets    = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 8)] #/24, 251 addresses + 5 reserved
-  elasticache_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 12)] #/24, 251 addresses + 5 reserved
-  redshift_subnets    = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 16)] #/24, 251 addresses + 5 reserved
-  intra_subnets       = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 20)] #/24, 251 addresses + 5 reserved
+  private_subnets     = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k)] #/24, 251 addresses + 5 reserved
+  public_subnets      = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 4)] #/24, 251 addresses + 5 reserved
+  database_subnets    = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 8)] #/24, 251 addresses + 5 reserved
+  elasticache_subnets = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 12)] #/24, 251 addresses + 5 reserved
+  redshift_subnets    = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 16)] #/24, 251 addresses + 5 reserved
+  intra_subnets       = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 20)] #/24, 251 addresses + 5 reserved
 
   private_subnet_names = ["Private Subnet One", "Private Subnet Two", "Private Subnet Three"]
   # public_subnet_names omitted to show default name generation for all three subnets
@@ -132,7 +132,7 @@ module "vpc_endpoints" {
     },
   }
 
-  tags = merge(local.tags, {
+  tags = merge(each.value.tags, {
     Project  = "Secret"
     Endpoint = "true"
   })
