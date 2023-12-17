@@ -2,7 +2,7 @@
 data "aws_availability_zones" "available" {}
 
 locals {
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
 ################################################################################
@@ -10,16 +10,16 @@ locals {
 ################################################################################
 
 module "vpc" {
-  source = "github.com/HanYangZhao/terraform-aws-vpc"
-  for_each = var.vpc
+  source     = "github.com/HanYangZhao/terraform-aws-vpc"
+  for_each   = var.vpc
   create_vpc = each.value.deploy
-  name = each.key
-  cidr = each.value.cidr
+  name       = each.key
+  cidr       = each.value.cidr
 
   azs                 = local.azs
-  private_subnets     = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k)] #/24, 251 addresses + 5 reserved
-  public_subnets      = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 4)] #/24, 251 addresses + 5 reserved
-  database_subnets    = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 8)] #/24, 251 addresses + 5 reserved
+  private_subnets     = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k)]      #/24, 251 addresses + 5 reserved
+  public_subnets      = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 4)]  #/24, 251 addresses + 5 reserved
+  database_subnets    = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 8)]  #/24, 251 addresses + 5 reserved
   elasticache_subnets = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 12)] #/24, 251 addresses + 5 reserved
   redshift_subnets    = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 16)] #/24, 251 addresses + 5 reserved
   intra_subnets       = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 20)] #/24, 251 addresses + 5 reserved
@@ -75,7 +75,7 @@ module "vpc" {
 
 module "vpc_endpoints" {
   for_each = module.vpc
-  source = "github.com/HanYangZhao/aws-terraform-vpc-endpoints"
+  source   = "github.com/HanYangZhao/aws-terraform-vpc-endpoints"
 
   vpc_id = each.value.vpc_id
 
@@ -97,7 +97,7 @@ module "vpc_endpoints" {
     dynamodb = {
       service         = "dynamodb"
       service_type    = "Gateway"
-      route_table_ids = flatten([each.value.intra_route_table_ids,each.value.private_route_table_ids, each.value.public_route_table_ids])
+      route_table_ids = flatten([each.value.intra_route_table_ids, each.value.private_route_table_ids, each.value.public_route_table_ids])
       policy          = data.aws_iam_policy_document.dynamodb_endpoint_policy[each.key].json
       tags            = { Name = "dynamodb-vpc-endpoint" }
     },
@@ -191,7 +191,7 @@ data "aws_iam_policy_document" "generic_endpoint_policy" {
 }
 
 resource "aws_security_group" "rds" {
-  for_each = module.vpc
+  for_each    = module.vpc
   name_prefix = "${each.key}-rds"
   description = "Allow PostgreSQL inbound traffic"
   vpc_id      = each.value.vpc_id
