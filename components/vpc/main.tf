@@ -98,7 +98,7 @@ module "vpc_endpoints" {
       service         = "dynamodb"
       service_type    = "Gateway"
       route_table_ids = flatten([each.value.intra_route_table_ids,each.value.private_route_table_ids, each.value.public_route_table_ids])
-      policy          = data.aws_iam_policy_document[each.key].dynamodb_endpoint_policy.json
+      policy          = data.aws_iam_policy_document.dynamodb_endpoint_policy[each.key].json
       tags            = { Name = "dynamodb-vpc-endpoint" }
     },
     ecs = {
@@ -116,13 +116,13 @@ module "vpc_endpoints" {
       service             = "ecr.api"
       private_dns_enabled = true
       subnet_ids          = each.value.private_subnets
-      policy              = data.aws_iam_policy_document[each.key].generic_endpoint_policy.json
+      policy              = data.aws_iam_policy_document.generic_endpoint_policy[each.key].json
     },
     ecr_dkr = {
       service             = "ecr.dkr"
       private_dns_enabled = true
       subnet_ids          = each.value.private_subnets
-      policy              = data.aws_iam_policy_document[each.key].generic_endpoint_policy.json
+      policy              = data.aws_iam_policy_document.generic_endpoint_policy[each.key].json
     },
     rds = {
       service             = "rds"
