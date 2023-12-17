@@ -13,13 +13,17 @@ on:
         description: 'The directory containing the Terraform configuration'
         required: true
         type: string
+    secrets:
+      tf_api_token:
+        description: 'Terraform API Token'
+        required: true
+        type: string
 
 jobs:
   terraform-cloud-apply:
     runs-on: ubuntu-latest
     env:
-      TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORGANIZATION }}
-      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      TF_API_TOKEN: ${{ secrets.tf_api_token }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
