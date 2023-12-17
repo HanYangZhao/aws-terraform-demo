@@ -22,16 +22,10 @@ on:
 
 jobs:
   terraform-apply-vpc:
-    runs-on: ubuntu-latest
-    env:
-      TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }}
-      TF_WORKSPACE: ${{ vars.TF_WORKSPACE_VPC }}
-    steps:
-      - name: Call reusable workflow for Terraform Apply
-        uses: ./.github/workflows/terraform-apply-template.yml
-        with:
-          tf_workspace: ${{env. TF_WORKSPACE}}
-          tf_cloud_org: ${{ env.TF_CLOUD_ORGANIZATION }}
-          tf_directory:  "components/vpc"
-          tf_vars_directory: "deploy-vpc"
-        secrets: inherit
+    uses: ./.github/workflows/terraform-apply-template.yml
+    with:
+      tf_workspace: "aws-terraform-demo-vpc"
+      tf_cloud_org: "hanztech"
+      tf_directory:  "components/vpc"
+      tf_vars_directory: "deploy-vpc"
+    secrets: inherit
