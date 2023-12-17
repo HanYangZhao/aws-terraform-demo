@@ -1,0 +1,49 @@
+name: Terraform Cloud Apply Template
+
+on:
+  workflow_call:
+    inputs:
+      tf_workspace:
+        description: 'The Terraform Cloud workspace to run the apply in'
+        required: true
+      tf_vars_directory:
+        description: 'The directory containing the Terraform var file'
+        required: true
+      tf_directory:
+        description: 'The directory containing the Terraform configuration'
+        required: true
+
+jobs:
+  terraform-cloud-apply:
+    runs-on: ubuntu-latest
+    ## OPTIONAL: can scope variables to this specific job
+    ## Example:
+    # env:
+    steps:
+    - name: Checkout code
+        uses: actions/checkout@v3
+
+    - name: Copy terraform.tfvars to target directory
+        run: |
+        cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
+        ls -la ./${{ inputs.tf_directory }}
+
+    - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
+        id: upload
+        with:
+        workspace: ${{ inputs.tf_workspace }}
+        directory: "./components/vpc"
+
+    - uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
+        id: create-run
+        with:
+        workspace: ${{inputs.tf_workspace }}
+        configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+
+    - uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.1.1
+        id: apply
+        if: ${{ fromJSON(steps.create-run.outputs.payload).data.attributes.actions.IsConfirmable }}
+        with:
+        run: ${{ steps.create-run.outputs.run_id }}
+        comment: "Apply Run from GitHub Actions CI ${{ github.sha }}"
+  
