@@ -16,13 +16,12 @@ on:
     ## RECOMMENDED: Specify to only run this workflow file when terraform configuration has changed.
     paths:
       - "deploy-vpc/*.tfvars"
-      - "deploy-aks/*.tfvars"
+      - "deploy-eks/*.tfvars"
 
 ## Add shared Environment Variables across jobs here ##
 env:
   TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }} ## Name of your existing Terraform Cloud Organization. RECOMMENDED: use repository variables. ex. "${{ vars.TF_CLOUD_ORGANIZATION }}"
   TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}" ## Terraform Cloud API Token. RECOMMENDED: replace with github action secrets. ex. "${{ secrets.TF_API_TOKEN }}"
-  TF_WORKSPACE: ${{ vars.TF_WORKSPACE_VPC }} ## Name of your existing workspace in Terraform Cloud.
   ## Additional env variables
   TF_LOG: DEBUG ## Helpful for troubleshooting
   # TF_MAX_TIMEOUT: "30m" ## If you wish to override the default "1h"
@@ -30,7 +29,7 @@ env:
 jobs:
   terraform-cloud-speculative-run-vpc:
     runs-on: ubuntu-latest
-    # if: contains(github.event.pull_request.changed_files, 'deploy-vpc/')
+    if: contains(github.event.pull_request.changed_files, 'deploy-vpc/')
     ## OPTIONAL: can scope variables to this specific job
     ## Example:
     # env:
@@ -46,7 +45,7 @@ jobs:
       - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         id: upload
         with:
-          workspace: ${{ env.TF_WORKSPACE }}
+          workspace: ${{ vars.TF_WORKSPACE_VPC }}
           directory: "./components/vpc"
           speculative: true
 
@@ -56,7 +55,7 @@ jobs:
         ## step.terraform-cloud-check-run-status will fail job after pr comment is created/updated.
         continue-on-error: true
         with:
-          workspace: ${{ env.TF_WORKSPACE }}
+          workspace: ${{ vars.TF_WORKSPACE_VPC }}
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
           plan_only: true
           ## OPTIONAL: set your own message for run. A default message will be defined for you.

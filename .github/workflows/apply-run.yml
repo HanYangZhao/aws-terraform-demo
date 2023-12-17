@@ -12,9 +12,9 @@ on:
     branches:
     ## RECOMMENDED: Change for your target branch, or include branches you wish to trigger this workflow file.
       - main
-    ## RECOMMENDED: Specify to only run this workflow file when terraform configuration has changed.
     paths:
-      - <<INPUT REQUIRED>> ## Example: 'terraform/**.tf'
+      - "deploy-vpc/*.tfvars"
+      - "deploy-eks/*.tfvars"
 
 ## RECOMMENDED: Limit apply runs job / workflow to a single concurrency group at a time.
 ## link: https://docs.github.com/en/actions/using-jobs/using-concurrency
@@ -24,33 +24,48 @@ on:
 ## Add shared Environment Variables across jobs here ##
 env:
   TF_CLOUD_ORGANIZATION: ${{ vars.TF_CLOUD_ORGANIZATION }} ## Name of your existing Terraform Cloud Organization. RECOMMENDED: use repository variables. ex. "${{ vars.TF_CLOUD_ORGANIZATION }}"
-  TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }} ## Terraform Cloud API Token. RECOMMENDED: replace with github action secrets. ex. "${{ secrets.TF_API_TOKEN }}"
-  TF_WORKSPACE: ${{ vars.TF_WORKSPACE }} ## Name of your existing workspace in Terraform Cloud.
-  CONFIG_DIRECTORY: "./" ## Directory of your Terraform Configuration. Relative to the project root.
+  TF_API_TOKEN: "${{ secrets.TF_API_TOKEN }}" ## Terraform Cloud API Token. RECOMMENDED: replace with github action secrets. ex. "${{ secrets.TF_API_TOKEN }}"
   ## Additional env variables
-  # TF_LOG: DEBUG ## Helpful for troubleshooting
+  TF_LOG: DEBUG ## Helpful for troubleshooting
   # TF_MAX_TIMEOUT: "30m" ## If you wish to override the default "1h"
 
 jobs:
-  terraform-cloud-apply-run:
+  terraform-cloud-apply-run-vpc:
     runs-on: ubuntu-latest
+    if: contains(toJSON(github.event.commits.*.added), 'deploy-vpc/') ||
+        contains(toJSON(github.event.commits.*.modified), 'deploy-vpc/')
     ## OPTIONAL: can scope variables to this specific job
     ## Example:
     # env:
     #  TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORG }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check for VPC changes
+        id: check_vpc_changes
+        run: |
+          echo "Checking for changes in 'deploy-vpc/'"
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- 'deploy-vpc/')
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "VPC_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Copy terraform.tfvars to components/vpc
+        run: |
+          cp ./deploy-vpc/terraform.tfvars ./components/vpc/
+          ls -la ./components/vpc/
 
       - uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         id: upload
         with:
-          workspace: ${{ env.TF_WORKSPACE }}
-          directory: ${{ env.CONFIG_DIRECTORY }}
+          workspace: ${{ vars.TF_WORKSPACE_VPC }}
+          directory: "./components/vpc"
 
       - uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         id: create-run
         with:
-          workspace: ${{ env.TF_WORKSPACE }}
+          workspace: ${{vars.TF_WORKSPACE_VPC }}
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
 
       - uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.1.1
