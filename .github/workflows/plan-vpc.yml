@@ -19,9 +19,13 @@ on:
 
 jobs:
   terraform-plan-vpc:
-    uses: ./.github/workflows/terraform-plan-template.yml
-    with:
-      tf_workspace: ${{ vars.TF_WORKSPACE_VPC }}
-      tf_directory:  "components/vpc"
-      tf_vars_directory: "deploy-vpc"
-      tf_api_token: ${{ secrets.TF_API_TOKEN }}
+    env:
+      TF_WORKSPACE_VPC: ${{ vars.TF_WORKSPACE_VPC }} 
+    steps:
+      - name: Call reusable workflow for Terraform Plan
+        uses: ./.github/workflows/terraform-plan-template.yml
+        with:
+          tf_workspace: ${{ env.TF_WORKSPACE_VPC }} 
+          tf_directory:  "components/vpc"
+          tf_vars_directory: "deploy-vpc"
+          tf_api_token: ${{ secrets.TF_API_TOKEN }}
