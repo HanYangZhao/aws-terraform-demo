@@ -128,7 +128,7 @@ module "vpc_endpoints" {
       service             = "rds"
       private_dns_enabled = true
       subnet_ids          = each.value.private_subnets
-      security_group_ids  = [aws_security_group[each.key].rds.id]
+      security_group_ids  = [aws_security_group.rds[each.key].id]
     },
   }
 
