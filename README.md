@@ -28,7 +28,7 @@ This repo contains example terraform code and github actions workflow needed to 
      * Decouple AWS provider version in for each resource type. This is sometimes an issue when Terraform is going through major version upgrade, where some resouces types have breaking change. By decoupling the providers for each type of resource we isolate the breaking change.
 
     ### Cons
-    * Adds complexity if you intend to organized multiple types of cloud resources in a "solution" (multiple type of resources managed at the same time as a part of a solution). It's more diffucult to make a tag on a specific release version of the infra
+    * Adds complexity if you intend to organized multiple types of cloud resources in a "solution" (multiple type of resources managed at the same time as a part of a solution). It's more diffucult to make a tag on a specific release version of the infra for a specfic solution.
 
 ## Deployment flow
 ![Alt text here](diagrams/deployment_flow.svg)
