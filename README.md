@@ -31,3 +31,6 @@ This repo contains example terraform code and github actions workflow needed to 
     * Not good if you intend to organized multiple cloud resources in a "solution" (multiple type of resources deployed at the same time)
 
 ## Deployment flow
+![Alt text here](diagrams/deployment_flow.svg)
+
+* Deployment uses pull request to tigger build pipelines using Terraform Cloud. Terraform change output will be added to the comments of the pull request
