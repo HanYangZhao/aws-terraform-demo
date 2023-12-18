@@ -25,10 +25,10 @@ This repo contains example terraform code and github actions workflow needed to 
     ### Pros
      * Decoupled components and modules allows for easy upgrade 
      * Seperate pipelines for each type or resource
-     * Decouple AWS provider version in for each resource type
+     * Decouple AWS provider version in for each resource type. This is sometimes an issue when Terraform is going through major version upgrade, where some resouces types have breaking change. By decoupling the providers for each type of resource we isolate the breaking change.
 
     ### Cons
-    * Not good if you intend to organized multiple cloud resources in a "solution" (multiple type of resources deployed at the same time)
+    * Adds complexity if you intend to organized multiple types of cloud resources in a "solution" (multiple type of resources managed at the same time as a part of a solution). It's more diffucult to make a tag on a specific release version of the infra
 
 ## Deployment flow
 ![Alt text here](diagrams/deployment_flow.svg)
