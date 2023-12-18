@@ -11,10 +11,10 @@ terraform {
 
 
 provider "aws" {
-  region = "ca-central-1"  # Default region
+  region = "ca-central-1" # Default region
 }
 
 provider "aws" {
   alias  = "us-west-2"
-  region = "us-west-2"  # Additional region
+  region = "us-west-2" # Additional region
 }
