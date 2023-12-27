@@ -10,7 +10,8 @@ variable "vpc" {
     manage_default_security_group = bool //false 
     enable_nat_gateway            = bool //true
     single_nat_gateway            = bool // true
-
+    public_subnet_tags            = map(string)
+    private_subnet_tags           = map(string)
     tags = map(string)
 
   }))
