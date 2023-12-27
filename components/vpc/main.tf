@@ -31,7 +31,7 @@ module "vpc" {
   redshift_subnet_names    = ["Redshift Subnet One", "Redshift Subnet Two", "Redshift Subnet Three"]
   intra_subnet_names       = []
 
-  create_database_subnet_group  = false
+  create_database_subnet_group  = true
   manage_default_network_acl    = each.value.manage_default_network_acl
   manage_default_route_table    = each.value.manage_default_route_table
   manage_default_security_group = each.value.manage_default_security_group
