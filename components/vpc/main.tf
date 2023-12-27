@@ -66,6 +66,9 @@ module "vpc" {
   create_flow_log_cloudwatch_iam_role  = true
   flow_log_max_aggregation_interval    = 60
 
+  public_subnet_tags = each.value.public_subnet_tags
+  private_subnet_tags = each.value.private_subnet_tags
+  
   tags = each.value.tags
 }
 
