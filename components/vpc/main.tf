@@ -26,7 +26,7 @@ module "vpc" {
 
   private_subnet_names = ["Private Subnet One", "Private Subnet Two", "Private Subnet Three"]
   # public_subnet_names omitted to show default name generation for all three subnets
-  database_subnet_names    = ["DB Subnet One","DB Subnet Two","DB Subnet Three"]
+  database_subnet_names    = ["DB Subnet One", "DB Subnet Two", "DB Subnet Three"]
   elasticache_subnet_names = ["Elasticache Subnet One", "Elasticache Subnet Two", "Elasticache Subnet Three"]
   redshift_subnet_names    = ["Redshift Subnet One", "Redshift Subnet Two", "Redshift Subnet Three"]
   intra_subnet_names       = []
@@ -66,9 +66,9 @@ module "vpc" {
   create_flow_log_cloudwatch_iam_role  = true
   flow_log_max_aggregation_interval    = 60
 
-  public_subnet_tags = each.value.public_subnet_tags
+  public_subnet_tags  = each.value.public_subnet_tags
   private_subnet_tags = each.value.private_subnet_tags
-  
+
   tags = each.value.tags
 }
 

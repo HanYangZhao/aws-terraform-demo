@@ -12,7 +12,7 @@ variable "vpc" {
     single_nat_gateway            = bool // true
     public_subnet_tags            = map(string)
     private_subnet_tags           = map(string)
-    tags = map(string)
+    tags                          = map(string)
 
   }))
 }

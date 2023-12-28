@@ -1,0 +1,28 @@
+# This template is pre-configured to run what's known as a speculative plan in Terraform Cloud.
+# Speculative plans are plan-only runs to test changes to configuration. Perfect for code reviews on a Pull Request.
+#
+# This workflow is configured to trigger when a pull request is opened against your `main` branch,
+# **IF** the set paths contain files that have changed. If the workflow runs, the included steps will upload your terraform configuration, create a new run, and output the plan information to a PR comment.
+#
+# NOTE: The last step in this template includes a script that will upsert a PR comment. (REQUIRES `Read and write permissions`)
+---
+    name: Terraform Cloud Plan Run VPC
+    
+    on:
+      pull_request:
+        branches:
+        ## RECOMMENDED: Change for your target branch, or include branches you wish to trigger this workflow file.
+          - main
+        ## RECOMMENDED: Specify to only run this workflow file when terraform configuration has changed.
+        paths:
+          - "deploy-eks/*.tfvars"
+    
+    jobs:
+      terraform-plan-eks:
+        uses: ./.github/workflows/terraform-plan-template.yml
+        with:
+          tf_workspace: "aws-terraform-demo-vpc"
+          tf_cloud_org: "hanztech"
+          tf_directory:  "components/eks"
+          tf_vars_directory: "deploy-eks"
+        secrets: inherit
