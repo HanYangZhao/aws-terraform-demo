@@ -22,29 +22,27 @@ data "aws_vpc" "vpcs_map" {
     name   = "tag:Name"
     values = [each.value]
   }
+
 }
 
-# Fetch all subnets
-data "aws_subnets" "all" {}
-
-# Filter the subnets by name and create a map of subnet IDs
-locals {
-  # Using a nested for loop to iterate over the clusters and their subnet names
-  #private_subnet_ids_map = {
-  # "dev" = [
-  #     "subnet-01a2b3c4d",
-  #     "subnet-02a2b3c4d"
-  # ],
-  # "stgn" = [
-  #     "subnet-03a2b3c4d",
-  #     "subnet-04a2b3c4d"
-  # ]
-  # }
-  private_subnet_ids_map = {
-    for cluster_name, subnet_names in local.private_subnets_map : cluster_name => [
-      for subnet in data.aws_subnets.all.ids : subnet
-      if contains(subnet_names, lookup({ for s in data.aws_subnets.all.subnets : s.id => s.tags["Name"] }, subnet, ""))
-    ]
+# Fetch all private subnets per cluster
+# "dev" = [
+#     "subnet-01a2b3c4d",
+#     "subnet-02a2b3c4d"
+# ],
+# "stgn" = [
+#     "subnet-03a2b3c4d",
+#     "subnet-04a2b3c4d"
+# ]
+# }
+data "aws_subnets" "private" {
+  for_each = var.eks
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.vpcs_map[each.key].id]
+  }
+  tags = {
+    Type = "Private"
   }
 }
 
@@ -92,7 +90,7 @@ module "eks" {
   }
 
   vpc_id                    = data.aws_vpc.vpcs_map[each.key].id
-  subnet_ids                = local.private_subnet_ids_map[each.key]
+  subnet_ids                = data.aws_subnets.private[each.key].ids
   control_plane_subnet_ids  = []
   manage_aws_auth_configmap = true
 
@@ -122,8 +120,8 @@ module "eks" {
       capacity_type              = each.value.node_capacity_type
       # Remote access cannot be specified with a launch template
       remote_access = {
-        ec2_ssh_key               = module.key_pair.key_pair_name
-        source_security_group_ids = [aws_security_group.remote_access.id]
+        ec2_ssh_key               = module.key_pair[each.key].key_pair_name
+        source_security_group_ids = [aws_security_group.remote_access[each.key].id]
       }
     }
 
@@ -229,7 +227,7 @@ module "ebs_kms_key" {
     # required for the ASG to manage encrypted volumes for nodes
     "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
     # required for the cluster / persistentvolume-controller to create encrypted PVCs
-    module.eks.cluster_iam_role_arn,
+    module.eks[each.key].cluster_iam_role_arn,
   ]
 
   # Aliases
@@ -253,7 +251,7 @@ resource "aws_security_group" "remote_access" {
   for_each    = var.eks
   name_prefix = "${each.key}-remote-access"
   description = "Allow remote SSH access"
-  vpc_id      = each.value.vpc_id
+  vpc_id      = data.aws_vpc.vpcs_map[each.key].id
 
   ingress {
     description = "SSH access"

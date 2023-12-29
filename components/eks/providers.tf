@@ -19,6 +19,14 @@ terraform {
       version = ">= 0.9"
     }
   }
+
+  cloud {
+    organization = "hanztech"
+    workspaces {
+      project = "AWS Demo"
+      name    = "aws-terraform-demo-vpc"
+    }
+  }
 }
 
 provider "aws" {
