@@ -38,13 +38,15 @@ data "aws_vpc" "vpcs_map" {
 data "aws_subnets" "private" {
   for_each = var.eks
   filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.vpcs_map[each.key].id]
+    name   = "tag:Name"
+    values = each.value.private_subnets_names
   }
   tags = {
     Type = "Private"
   }
 }
+
+
 
 ################################################################################
 # EKS Module
@@ -66,7 +68,7 @@ module "eks" {
   # the VPC CNI fails to assign IPs and nodes cannot join the cluster
   # See https://github.com/aws/containers-roadmap/issues/1666 for more context
   # TODO - remove this policy once AWS releases a managed version similar to AmazonEKS_CNI_Policy (IPv4)
-  #   create_cni_ipv6_iam_policy = true
+  # create_cni_ipv6_iam_policy = true
 
   cluster_addons = {
     coredns = {
@@ -76,9 +78,9 @@ module "eks" {
       most_recent = true
     }
     vpc-cni = {
-      most_recent              = true
-      before_compute           = true
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn
+      most_recent    = true
+      before_compute = true
+      # service_account_role_arn = module.vpc_cni_irsa[each.key].iam_role_arn // This is set in the github.com/HanYangZhao/aws-terraform-eks module to fix a circular dependency
       configuration_values = jsonencode({
         env = {
           # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
@@ -106,17 +108,31 @@ module "eks" {
     iam_role_attach_cni_policy = true
   }
 
+  aws_auth_roles = each.value.aws_auth_roles
+
+
+  aws_auth_users = [
+    {
+      userarn  = "arn:aws:iam::412136911237:user/han"
+      username = "han"
+      groups   = ["system:masters"]
+    },
+  ]
+
   eks_managed_node_groups = {
     # Default node group - as provided by AWS EKS
     default_node_group = {
       # By default, the module creates a launch template to ensure tags are propagated to instances, etc.,
       # so we need to disable it to use the default template provided by the AWS EKS managed node group service
       use_custom_launch_template = false
+      # name                       = "${each.key}-default"
+      # iam_role_use_name_prefix   = false
+      # use_name_prefix            = false
       min_size                   = each.value.min_node_size
       max_size                   = each.value.max_node_size
       desired_size               = each.value.desired_node_size
       disk_size                  = each.value.node_disk_size
-      instance_types             = [each.value.node_instance_types]
+      instance_types             = [each.value.node_instance_type]
       capacity_type              = each.value.node_capacity_type
       # Remote access cannot be specified with a launch template
       remote_access = {
@@ -125,21 +141,23 @@ module "eks" {
       }
     }
 
-    # Use a custom AMI
-    custom_ami = {
-      ami_type = "AL2_ARM_64"
-      # Current default AMI used by managed node groups - pseudo "custom"
-      ami_id = data.aws_ami.eks_default_arm[each.key].image_id
+    # # Use a custom AMI
+    # custom_ami = {
+    #   ami_type = "AL2_x86_64"
+    #   # Current default AMI used by managed node groups - pseudo "custom"
+    #   ami_id = data.aws_ami.eks_default_arm[each.key].image_id
 
-      # This will ensure the bootstrap user data is used to join the node
-      # By default, EKS managed node groups will not append bootstrap script;
-      # this adds it back in using the default template provided by the module
-      # Note: this assumes the AMI provided is an EKS optimized AMI derivative
-      enable_bootstrap_user_data = true
+    #   # This will ensure the bootstrap user data is used to join the node
+    #   # By default, EKS managed node groups will not append bootstrap script;
+    #   # this adds it back in using the default template provided by the module
+    #   # Note: this assumes the AMI provided is an EKS optimized AMI derivative
+    #   enable_bootstrap_user_data = true
 
-      instance_types = [each.value.node_instance_types]
-    }
+    #   instance_types = [each.value.node_instance_type]
+    # }
   }
+
+
 
   tags = each.value.tags
 }
@@ -159,7 +177,7 @@ locals {
   }
 
   cluster_autoscaler_label_tags = merge([
-    for name, group in module.eks.eks_managed_node_groups : {
+    for name, group in module.eks["dev"].eks_managed_node_groups : {
       for label_name, label_value in coalesce(group.node_group_labels, {}) : "${name}|label|${label_name}" => {
         autoscaling_group = group.node_group_autoscaling_group_names[0],
         key               = "k8s.io/cluster-autoscaler/node-template/label/${label_name}",
@@ -169,7 +187,7 @@ locals {
   ]...)
 
   cluster_autoscaler_taint_tags = merge([
-    for name, group in module.eks.eks_managed_node_groups : {
+    for name, group in module.eks["dev"].eks_managed_node_groups : {
       for taint in coalesce(group.node_group_taints, []) : "${name}|taint|${taint.key}" => {
         autoscaling_group = group.node_group_autoscaling_group_names[0],
         key               = "k8s.io/cluster-autoscaler/node-template/taint/${taint.key}"
@@ -194,22 +212,23 @@ resource "aws_autoscaling_group_tag" "cluster_autoscaler_label_tags" {
   }
 }
 
+# module "vpc_cni_irsa" {
+#   for_each = var.eks
+#   depends_on = [null_resource.dependency_resolver]
+#   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+#   version = "~> 5.0"
 
-module "vpc_cni_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.0"
+#   role_name_prefix      = "VPC-CNI-IRSA-${each.key}"
+#   attach_vpc_cni_policy = true
+#   vpc_cni_enable_ipv4   = true
 
-  role_name_prefix      = "VPC-CNI-IRSA"
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-}
+#   oidc_providers = {
+#     main = {
+#       provider_arn               = module.eks[each.key].oidc_provider_arn
+#       namespace_service_accounts = ["kube-system:aws-node"]
+#     }
+#   }
+# }
 
 module "ebs_kms_key" {
   for_each = var.eks
@@ -300,6 +319,6 @@ data "aws_ami" "eks_default_arm" {
 
   filter {
     name   = "name"
-    values = ["amazon-eks-arm64-node-${each.value.cluster_version}-v*"]
+    values = ["amazon-eks-node-${each.value.cluster_version}-v*"]
   }
 }

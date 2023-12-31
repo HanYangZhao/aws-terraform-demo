@@ -10,7 +10,12 @@ variable "eks" {
     desired_node_size     = number
     node_instance_type    = string
     node_disk_size        = number
-    capacity_type         = string
+    node_capacity_type    = string
+    aws_auth_roles = list(object({
+      rolearn  = string
+      username = string,
+      groups   = list(string)
+    }))
 
     tags = map(string)
 
