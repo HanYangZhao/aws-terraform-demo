@@ -7,6 +7,14 @@ terraform {
       version = "5.3.0"
     }
   }
+
+  cloud {
+    organization = "hanztech"
+    workspaces {
+      project = "AWS Demo"
+      name    = "aws-terraform-demo-vpc"
+    }
+  }
 }
 
 

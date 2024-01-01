@@ -9,6 +9,9 @@ vpc = {
     manage_default_security_group = false
     enable_nat_gateway            = true
     single_nat_gateway            = true
+    enable_dhcp_options           = true
+    dhcp_options_domain_name_servers = ["AmazonProvidedDNS"]
+    private_subnet_names          = ["Private Subnet One", "Private Subnet Two", "Private Subnet Three"]
     public_subnet_tags = {
       "kubernetes.io/role/elb" = 1
     }

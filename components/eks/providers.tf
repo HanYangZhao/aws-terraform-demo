@@ -24,7 +24,7 @@ terraform {
     organization = "hanztech"
     workspaces {
       project = "AWS Demo"
-      name    = "aws-terraform-demo-vpc"
+      name    = "aws-terraform-demo-eks"
     }
   }
 }
