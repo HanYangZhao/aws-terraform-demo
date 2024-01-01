@@ -24,12 +24,12 @@ module "vpc" {
   redshift_subnets    = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 16)] #/24, 251 addresses + 5 reserved
   intra_subnets       = [for k, v in local.azs : cidrsubnet(each.value.cidr, 8, k + 20)] #/24, 251 addresses + 5 reserved
 
-  private_subnet_names = ["Private Subnet One", "Private Subnet Two", "Private Subnet Three"]
+  private_subnet_names = each.value.private_subnet_names
   # public_subnet_names omitted to show default name generation for all three subnets
   database_subnet_names    = ["DB Subnet One", "DB Subnet Two", "DB Subnet Three"]
   elasticache_subnet_names = ["Elasticache Subnet One", "Elasticache Subnet Two", "Elasticache Subnet Three"]
   redshift_subnet_names    = ["Redshift Subnet One", "Redshift Subnet Two", "Redshift Subnet Three"]
-  intra_subnet_names       = []
+  intra_subnet_names       = each.value.intra_subnet_names
 
   create_database_subnet_group  = true
   manage_default_network_acl    = each.value.manage_default_network_acl
@@ -57,8 +57,7 @@ module "vpc" {
   enable_vpn_gateway = true
 
   enable_dhcp_options              = true
-  dhcp_options_domain_name         = "service.consul"
-  dhcp_options_domain_name_servers = ["127.0.0.1", "10.10.0.2"]
+  dhcp_options_domain_name_servers = each.value.dhcp_options_domain_name_servers
 
   # VPC Flow Logs (Cloudwatch log group and IAM role will be created)
   enable_flow_log                      = true
@@ -115,18 +114,20 @@ module "vpc_endpoints" {
       private_dns_enabled = true
       subnet_ids          = each.value.private_subnets
     },
-    ecr_api = {
-      service             = "ecr.api"
-      private_dns_enabled = true
-      subnet_ids          = each.value.private_subnets
-      policy              = data.aws_iam_policy_document.generic_endpoint_policy[each.key].json
-    },
-    ecr_dkr = {
-      service             = "ecr.dkr"
-      private_dns_enabled = true
-      subnet_ids          = each.value.private_subnets
-      policy              = data.aws_iam_policy_document.generic_endpoint_policy[each.key].json
-    },
+
+    #Remove ECR VPC endpoints since it's breaks EKS cluster add-on. The cluster add-on pull from public ECR repo which is not supported by ECR endpoint https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html
+    # ecr_api = {
+    #   service             = "ecr.api"
+    #   private_dns_enabled = true
+    #   subnet_ids          = each.value.private_subnets
+    #   policy              = data.aws_iam_policy_document.generic_endpoint_policy[each.key].json
+    # },
+    # ecr_dkr = {
+    #   service             = "ecr.dkr"
+    #   private_dns_enabled = true
+    #   subnet_ids          = each.value.private_subnets
+    #   policy              = data.aws_iam_policy_document.generic_endpoint_policy[each.key].json
+    # },
     rds = {
       service             = "rds"
       private_dns_enabled = true
