@@ -34,6 +34,7 @@ jobs:
     steps:
     - uses: dorny/paths-filter@v2
       id: filter
+      with:
         filters: |
         dev:
           - 'deploy-vpc/dev/*.tfvars'
