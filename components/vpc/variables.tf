@@ -19,3 +19,9 @@ variable "vpc" {
     tags                             = map(string)
   }))
 }
+
+variable "aws_allowed_account_ids" {
+  description = "Accounts that Terraform is allowed to operate on"
+  type = list(string)
+  default = ""
+}

@@ -20,6 +20,7 @@ terraform {
 
 provider "aws" {
   region = "ca-central-1" # Default region
+  allowed_account_ids  = var.aws_allowed_account_ids
 }
 
 provider "aws" {

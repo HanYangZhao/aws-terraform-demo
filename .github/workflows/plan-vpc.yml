@@ -6,7 +6,7 @@
 #
 # NOTE: The last step in this template includes a script that will upsert a PR comment. (REQUIRES `Read and write permissions`)
 ---
-name: Terraform Cloud Plan Run VPC
+name: Terraform Cloud Plan Run VPC Dev
 
 on:
   pull_request:
@@ -15,14 +15,43 @@ on:
       - main
     ## RECOMMENDED: Specify to only run this workflow file when terraform configuration has changed.
     paths:
-      - "deploy-vpc/*.tfvars"
+      - "deploy-vpc/dev/*.tfvars"
+
+env:
+  TF_WORKSPACE: "aws-terraform-demo-vpc"
+  TF_CLOUD_ORG: "hanztech"
+  TF_DIRECTORY: "components/vpc"
+  TF_VARS_DIRECTORY: "deploy-vpc"
 
 jobs:
-  terraform-plan-vpc:
-    uses: ./.github/workflows/terraform-plan-template.yml
-    with:
-      tf_workspace: "aws-terraform-demo-vpc"
-      tf_cloud_org: "hanztech"
-      tf_directory:  "components/vpc"
-      tf_vars_directory: "deploy-vpc"
-    secrets: inherit
+  changes:
+    permissions:
+      pull-requests: read
+    outputs:
+      dev: ${{ steps.filter.outputs.dev }}
+      stgn: ${{ steps.filter.outputs.stgn }}
+      prod: ${{ steps.filter.outputs.prod }}
+    steps:
+    - uses: dorny/paths-filter@v2
+      id: filter
+        filters: |
+        dev:
+          - 'deploy-vpc/dev/*.tfvars'
+        stgn:
+          - 'deploy-vpc/stgn/*.tfvars'
+        prod:
+          - 'deploy-vpc/prod/*.tfvars'
+
+  Plan VPC Dev:
+    needs: changes
+    if: ${{ needs.changes.outputs.dev == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/workflows/terraform-plan-template.yml
+      with:
+        tf_workspace: ${{ env.TF_WORKSPACE }}
+        tf_cloud_org: ${{ env.TF_CLOUD_ORG }}
+        tf_directory: ${{ env.TF_DIRECTORY }}
+        tf_vars_directory: ${{ env.TF_VARS_DIRECTORY }}
+        tf_var_aws_allowed_accounts_ids: ${{ env.TF_VARS_AWS_ALLOWED_ACOUNTS_IDS_DEV }}
+      secrets: inherit
