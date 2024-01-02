@@ -2,6 +2,18 @@
 
 This repo contains example terraform code and github actions workflow needed to deploy modular and scalable AWS infra with Terraform Cloud API
 
+## To Do
+- [x] Add integration with TF cloud
+- [x] Add integration with Github Actions
+- [x] Add deployement for VPC
+- [x] Add deployement for EKS
+- [ ] Explore TF json format for automation and templating purpose
+- [ ] Add deployment for Kubernetes (namespace, ingress, IAM....). Find a workaround for the providers alias not able to use variables
+- [ ] Add component and deployement for DB
+- [ ] Integration with terragrunt? (It seems complicated to get it work with both github actions and TF cloud)
+- [ ] Refactor the github actions so we don't need a seperate yml for each component.
+
+
 ## Setup
 
 * Enable Github Actions
@@ -23,12 +35,17 @@ This repo contains example terraform code and github actions workflow needed to 
 * This setup is designed to provide a clear separation between resource configuration and module definition, which helps in keeping the repository orderly and the deployment process straightforward.
 
     ### Pros
-     * Decoupled components and modules allows for easy upgrade 
-     * Seperate pipelines for each type or resource
-     * Decouple AWS provider version in for each resource type. This is sometimes an issue when Terraform is going through major version upgrade, where some resouces types have breaking change. By decoupling the providers for each type of resource we isolate the breaking change.
+     * Decoupled components and modules allows for easy upgrade without conflict. Child modules should be tagged and referenced in data source.
+     * Seperate pipelines and tfstate for each type or resource, this limits the risk of unwanted changes and make the tfstate smaller ideally.
+     * Decouple AWS provider version in for each pipeline. This is sometimes an issue when Terraform is going through major version upgrade, causing some resouces types to have breaking change. By decoupling the providers for each type of resource we isolate the breaking change to a single pipeline. Other resouces can sill proceed with the upgrade.
+     * If the organization is not mono-repo, multiple Infra teams within the organization can re-use the same child modules this way.
 
     ### Cons
     * Adds complexity if you intend to organized multiple types of cloud resources in a "solution" (multiple type of resources managed at the same time as a part of a solution). It's more diffucult to make a tag on a specific release version of the infra for a specfic solution.
+    * Upgrade and maintenance of child modules can become a problem in the long run with multiple versions. In a centralized repo all components must be up to date with modules with one single source of truth.
+
+
+
 
 ## Deployment flow
 ![Alt text here](diagrams/deployment_flow.svg)
