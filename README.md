@@ -7,7 +7,7 @@ This repo contains example terraform code and github actions workflow needed to 
 - [x] Add integration with Github Actions
 - [x] Add deployement for VPC
 - [x] Add deployement for EKS
-- [x] Multiple AWS accounts support for dev/stgn/prod
+- [x] Seperate AWS accounts support for dev/stgn/prod
 - [ ] Multi Region support?
 - [ ] Explore TF json format for automation and templating purpose
 - [ ] Add deployment for Kubernetes (namespace, ingress, IAM....). Find a workaround for the providers alias not able to use variables
