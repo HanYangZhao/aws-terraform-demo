@@ -1,56 +1,79 @@
+
+# This workflow checks which of the 3 env has been modified and calls sub workflow to run the apply on the targeted environment,
+# **IF** the set paths contain files that have changed. If the workflow runs, the included steps will upload your terraform configuration, create a new run, and output the apply information to a PR comment.
+#
+# NOTE: The last step in this template includes a script that will upsert a PR comment. (REQUIRES `Read and write permissions`)
+# NOTE: There is a ugly hack to fix the issue where you can’t reference environment variables as inputs for resusable actions. So the inputs are set as outputs of the first job. See https://github.com/orgs/community/discussions/26529
+# NOTE: Make sure TF_VAR_AWS_ALLOWED_ACCOUNT_ID_DEV, TF_VAR_AWS_ALLOWED_ACCOUNT_ID_STGN, TF_VAR_AWS_ALLOWED_ACCOUNT_ID_PROD is defined in the github repository env vars
+---
+name: Terraform Cloud apply Template
+
 on:
   workflow_call:
     inputs:
-      tf_workspace:
-        description: 'The Terraform Cloud workspace to run the apply in'
-        required: true
-        type: string
-      tf_cloud_org:
-        description: 'The Terraform Cloud org to run the apply in'
-        required: true
-        type: string
-      tf_vars_directory:
-        description: 'The directory containing the Terraform var file'
+      tf_workspace_prefix:
+        description: 'The Cloud component (EKS,VPC...)'
         required: true
         type: string
       tf_directory:
-        description: 'The directory containing the Terraform configuration'
+        description: 'prefix for the directory of the components'
         required: true
-        type: string
+        type: string   
+      tf_vars_directory_prefix:
+        description: 'prefix for the directory of the tfvars'
+        required: true
+        type: string   
 
 jobs:
-  terraform-cloud-apply:
+  check_for_changes:
     runs-on: ubuntu-latest
-    env:
-      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
-      TF_CLOUD_ORGANIZATION: ${{ inputs.tf_cloud_org }}
+    outputs:
+      has_dev_changes: ${{ steps.path_filter.outputs.dev }}
+      has_stgn_changes: ${{ steps.path_filter.outputs.stgn }}
+      has_prod_changes: ${{ steps.path_filter.outputs.prod }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Copy terraform.tfvars to target directory
-        run: |
-          cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
-          ls -la ./${{ inputs.tf_directory }}
-
-      - name: Upload configuration to Terraform Cloud
-        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
-        id: upload
+      - uses: actions/checkout@v3
+      - id: path_filter
+        uses: dorny/paths-filter@v2
         with:
-          workspace: ${{ inputs.tf_workspace }}
-          directory: ${{ inputs.tf_directory }}
+          list-files: shell
+          filters: |
+            dev:
+              - ${{ inputs.tf_vars_directory_prefix }}/dev/*.tfvars
+            stgn:
+              - ${{ inputs.tf_vars_directory_prefix }}/stgn/*.tfvars
+            prod:
+              - ${{ inputs.tf_vars_directory_prefix }}/prod/*.tfvars
 
-      - name: Create Terraform Cloud run
-        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
-        id: create-run
-        with:
-          workspace: ${{ inputs.tf_workspace }}
-          configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+  terraform_apply_dev:
+    needs: check_for_changes 
+    if: ${{ needs.check_for_changes.outputs.has_dev_changes == 'true' }}
+    uses: ./.github/workflows/terraform-apply-sub-template.yml
+    with:
+      tf_workspace: ${{ inputs.tf_workspace_prefix }}-dev
+      tf_directory: ${{ inputs.tf_directory }}
+      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/dev 
+      tf_var_aws_allowed_account_id:  ${{ vars.TF_VAR_AWS_ALLOWED_ACCOUNT_ID_DEV }}
+    secrets: inherit
 
-      - name: Apply Terraform Cloud run
-        uses: hashicorp/tfc-workflows-github/actions/apply-run@v1.1.1
-        id: apply
-        if: ${{ fromJSON(steps.create-run.outputs.payload).data.attributes.actions.is_confirmable }}
-        with:
-          run: ${{ steps.create-run.outputs.run_id }}
-          comment: "Apply Run from GitHub Actions CI ${{ github.sha }}"
+  terraform_apply_stgn:
+    needs: check_for_changes
+    if: ${{ needs.check_for_changes.outputs.has_stgn_changes == 'true' }}
+    uses: ./.github/workflows/terraform-apply-sub-template.yml
+    with:
+      tf_workspace: ${{ inputs.tf_workspace_prefix }}-stgn
+      tf_directory: ${{ inputs.tf_directory }}
+      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/stgn 
+      tf_var_aws_allowed_account_id:  ${{ vars.TF_VAR_AWS_ALLOWED_ACCOUNT_ID_STGN }}
+    secrets: inherit
+
+  terraform_apply_prod:
+    needs: check_for_changes
+    if: ${{ needs.check_for_changes.outputs.has_prod_changes == 'true' }}
+    uses: ./.github/workflows/terraform-apply-sub-template.yml
+    with:
+      tf_workspace: ${{ inputs.tf_workspace_prefix }}-prod
+      tf_directory: ${{ inputs.tf_directory }}
+      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/prod 
+      tf_var_aws_allowed_account_id:  ${{ vars.TF_VAR_AWS_ALLOWED_ACCOUNT_ID_PROD }}
+    secrets: inherit

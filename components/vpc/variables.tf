@@ -20,8 +20,8 @@ variable "vpc" {
   }))
 }
 
-variable "aws_allowed_account_ids" {
-  description = "Accounts that Terraform is allowed to operate on"
-  type = list(string)
+variable "aws_allowed_account_id" {
+  description = "Account that Terraform is allowed to operate on"
+  type = string
   default = ""
 }

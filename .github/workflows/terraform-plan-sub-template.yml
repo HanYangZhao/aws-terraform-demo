@@ -1,0 +1,112 @@
+# Please make sure TF_API_TOKEN and TF_CLOUD_ORGANIZATION is defined as an repository secrets
+
+name: Terraform Cloud Plan Job Template
+
+on:
+  workflow_call:
+    inputs:
+      tf_workspace:
+        description: 'The Terraform Cloud workspace to run the plan in'
+        required: true
+        type: string
+      tf_vars_directory:
+        description: 'The directory containing the Terraform var file'
+        required: true
+        type: string
+      tf_directory:
+        description: 'The directory containing the Terraform configuration'
+        required: true
+        type: string
+      tf_var_aws_allowed_account_id:
+        description: 'The account ids terraform is allowed to operate on'
+        required: true
+        type: string
+      
+
+jobs:
+  terraform-cloud-plan:
+    runs-on: ubuntu-latest
+    env:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORG }}
+      TF_VAR_aws_allowed_account_id : ${{ inputs.tf_var_aws_allowed_account_id }}
+      # TF_MAX_TIMEOUT: "30m" ## If you wish to override the default "1h"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Copy terraform.tfvars to target directory
+        run: |
+          cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
+          ls -la ./${{ inputs.tf_directory }}
+
+      - name: Upload configuration to Terraform Cloud
+        uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
+        id: upload
+        with:
+          workspace: ${{ inputs.tf_workspace }}
+          directory: ${{ inputs.tf_directory }}
+          speculative: true
+
+      - name: Create run in Terraform Cloud
+        uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
+        id: run
+        continue-on-error: true
+        with:
+          workspace: ${{ inputs.tf_workspace }}
+          configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
+          plan_only: true
+          message: "Triggered From GitHub Actions CI ${{ github.sha }}"
+
+      - name: Get plan output from Terraform Cloud
+        uses: hashicorp/tfc-workflows-github/actions/plan-output@v1.1.1
+        id: plan-output
+        with:
+          plan: ${{ steps.run.outputs.plan_id }}
+
+      - name: Upsert PR comment with plan output
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // 1. Retrieve existing bot comments for the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const botComment = comments.find(comment => {
+              return comment.user.type === 'Bot' && comment.body.includes('Terraform Cloud Plan Output')
+            })
+            const output = `#### Terraform Cloud Plan Output
+                \`\`\`\n
+                Plan: ${{ steps.plan-output.outputs.add }} to add, ${{ steps.plan-output.outputs.change }} to change, ${{ steps.plan-output.outputs.destroy }} to destroy.
+                \`\`\`
+                [Terraform Cloud Plan](${{ steps.run.outputs.run_link }})
+                `
+            // 3. If we have a comment, update it, otherwise create a new one
+            if (botComment) {
+              github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: output
+              })
+            } else {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+            }
+
+      - name: Check Terraform Cloud run status
+        id: terraform-cloud-check-run-status
+        if: ${{ steps.run.outputs.run_status != 'planned_and_finished'}}
+        run: |
+          echo "Terraform Cloud VPC Run Failed or Requires Further Attention"
+          echo "Run Status: '${{ steps.run.outputs.run_status }}'"
+          echo "${{ steps.run.outputs.run_link }}"
+          exit 1
