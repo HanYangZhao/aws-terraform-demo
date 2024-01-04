@@ -22,3 +22,9 @@ variable "eks" {
 
   }))
 }
+
+variable "aws_allowed_account_id" {
+  description = "Account that Terraform is allowed to operate on"
+  type = string
+  default = null
+}
