@@ -91,7 +91,7 @@ module "eks" {
     vpc-cni = {
       most_recent              = false
       before_compute           = true
-      service_account_role_arn = module.vpc_cni_irsa.iam_role_arn // TODO: Set in the github.com/HanYangZhao/aws-terraform-eks module to fix a circular dependency
+      # service_account_role_arn = module.vpc_cni_irsa.iam_role_arn //Set in the github.com/HanYangZhao/aws-terraform-eks module to fix a circular dependency
       configuration_values = jsonencode({
         env = {
           # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
@@ -221,22 +221,22 @@ module "eks" {
 # }
 
 # TODO : fix this to make it work with for_each
-module "vpc_cni_irsa" {
-  # for_each = var.eks
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.0"
+# module "vpc_cni_irsa" {
+#   # for_each = var.eks
+#   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+#   version = "~> 5.0"
 
-  role_name_prefix      = "VPC-CNI-IRSA-dev"
-  attach_vpc_cni_policy = true
-  vpc_cni_enable_ipv4   = true
+#   role_name_prefix      = "VPC-CNI-IRSA-dev"
+#   attach_vpc_cni_policy = true
+#   vpc_cni_enable_ipv4   = true
 
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks["dev"].oidc_provider_arn
-      namespace_service_accounts = ["kube-system:aws-node"]
-    }
-  }
-}
+#   oidc_providers = {
+#     main = {
+#       provider_arn               = module.eks["dev"].oidc_provider_arn
+#       namespace_service_accounts = ["kube-system:aws-node"]
+#     }
+#   }
+# }
 
 # module "ebs_kms_key" {
 #   for_each = var.eks
