@@ -22,7 +22,11 @@ on:
       tf_vars_directory_prefix:
         description: 'prefix for the directory of the tfvars'
         required: true
-        type: string   
+        type: string
+      tf_region:
+        description: 'aws region'
+        required: true
+        type: string
 
 jobs:
   check_for_changes:

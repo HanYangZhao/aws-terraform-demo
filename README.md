@@ -59,6 +59,7 @@ https://developer.hashicorp.com/terraform/cloud-docs/run/cli
     * Adds complexity if you intend to organized multiple types of cloud resources in a "solution" (multiple type of resources managed at the same time as a part of a solution). It's more diffucult to make a tag on a specific release version of the infra for a specfic solution.
     * Upgrade and maintenance of child modules can become a problem in the long run with multiple versions. In a centralized repo all components must be up to date with modules with one single source of truth.
     * Each TFC workspace holds one tfstate for each env, so there could be lots of tfstate.
+    * Dependencies between different components must be manually managed. 
 
 
 

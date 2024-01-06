@@ -1,0 +1,75 @@
+
+# In this  script, a Bash array `regions` is created to store each extracted region. 
+#The `for` loop goes over each line in `CHANGED_FILES`, and if the file matches the pattern `deploy-vpc/dev/*/*`, it extracts the region and adds it to the `regions` array. 
+#After processing all files, the unique regions are determined by sorting the array and removing duplicates, and then they are set as the job's output.
+
+name: Template to Extract the region to deploy the infra
+
+on:
+  workflow_call:
+    inputs:
+      tf_directory:
+        description: 'the directory of the components'
+        required: true
+        type: string     
+
+# jobs:
+#     extract_region:
+#         runs-on: ubuntu-latest
+#         outputs:
+#         region: ${{ steps.set_region.outputs.region }}
+#         steps:
+#         - name: Checkout code
+#             uses: actions/checkout@v3
+
+#         - name: Get list of changed files and extract region
+#             id: set_region
+#             run: |
+#             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep  "^${{ inputs.tf_directory }}/")
+#             echo "Changed files: $CHANGED_FILES"
+
+#             # Extract the region from the path
+#             if [[ $CHANGED_FILES == ${{ tf_directory }}/*/*/* ]]; then
+#                 REGION=$(echo $CHANGED_FILES | cut -d'/' -f3)
+#                 echo "Extracted region: $REGION"
+#                 echo "::set-output name=region::$REGION"
+#             else
+#                 echo "No region could be extracted from the path."
+#                 echo "::set-output name=region::"
+#             fi
+#             shell: bash
+
+#         - name: Display extracted region
+#             run: |
+#             echo "Region: ${{ steps.set_region.outputs.region }}"
+
+jobs:
+  extract_region:
+    runs-on: ubuntu-latest
+    outputs:
+      regions: ${{ steps.set_regions.outputs.regions }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get list of changed files and extract regions
+        id: set_regions
+        run: |
+          echo "regions=()" >> $GITHUB_ENV
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep "^${{ inputs.tf_directory }}/")
+          echo "Changed files: $CHANGED_FILES"
+
+          for FILE in $CHANGED_FILES; do
+            if [[ $FILE == ${{ tf_directory }}/*/*/* ]]; then
+              REGION=$(echo $FILE | cut -d'/' -f3)
+              echo "Extracted region: $REGION"
+              echo "regions+=($REGION)" >> $GITHUB_ENV
+            fi
+          done
+        shell: bash
+
+      - name: Set output with unique regions
+        run: |
+          echo "Unique regions: ${regions[*]}"
+          UNIQUE_REGIONS=$(echo "${regions[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "::set-output name=regions::$UNIQUE_REGIONS"

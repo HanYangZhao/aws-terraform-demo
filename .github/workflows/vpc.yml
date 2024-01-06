@@ -15,22 +15,40 @@ on:
       - "deploy-vpc/**"
 
 jobs:
+  extract_region:
+    uses: ./github/workflows/extract-region.yml
+    with 
+      tf_directory: "components/vpc"
   # Only plan when there's a pull request against the main branch
   plan_vpc:
-    if: ${{ github.event_name == 'pull_request' }}
-    uses: ./.github/workflows/terraform-plan-template.yml
-    with:
-      tf_workspace_prefix: "aws-terraform-demo-vpc"
-      tf_directory: "components/vpc"
-      tf_vars_directory_prefix: "deploy-vpc"
-    secrets: inherit
+    plan_vpc:
+      needs: extract_region
+      if: ${{ github.event_name == 'pull_request' }}
+      runs-on: ubuntu-latest
+      strategy:
+        fail-fast: false
+        matrix:
+          region: ${{ fromJson(needs.extract_region.outputs.regions) }}
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+        - name: Run Terraform Plan for each region
+          uses: ./.github/workflows/terraform-plan-template.yml
+          with:
+            tf_workspace_prefix: "aws-terraform-demo-vpc"
+            tf_directory: "components/vpc"
+            tf_vars_directory_prefix: "deploy-vpc/"
+            tf_region: ${{ matrix.region }}
+          secrets: inherit
 
   # Only apply when there's a push to the main branch
   apply_vpc:
+    needs: extract_region
     if: ${{ github.event_name == 'push' }}
     uses: ./.github/workflows/terraform-apply-template.yml
     with:
       tf_workspace_prefix: "aws-terraform-demo-vpc"
       tf_directory: "components/vpc"
       tf_vars_directory_prefix: "deploy-vpc"
+      tf_region: ${{ needs.extract_region.outputs.region }}
     secrets: inherit

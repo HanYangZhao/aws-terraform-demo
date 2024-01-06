@@ -17,6 +17,11 @@ on:
         description: 'The account ids terraform is allowed to operate on'
         required: true
         type: string
+      tf_region:
+        description: 'aws region'
+        required: true
+        type: string
+  
 
 jobs:
   terraform-cloud-apply:
@@ -25,6 +30,7 @@ jobs:
       TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
       TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORG }}
       TF_VAR_aws_allowed_account_id : ${{ inputs.tf_var_aws_allowed_account_id }}
+      TF_REGION: ${{ inputs.tf_region }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -32,7 +38,8 @@ jobs:
       - name: Copy terraform.tfvars to target directory
         run: |
           cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
-          ls -la ./${{ inputs.tf_directory }}
+          envsubst ./${{ inputs.tf_directory }}/providers.tf > providers-tmp.tf && mv providers-tmp.tf providers.tf
+          cat ./${{ inputs.tf_directory }}/providers.tf
 
       - name: Upload configuration to Terraform Cloud
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1

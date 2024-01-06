@@ -19,22 +19,10 @@ terraform {
       version = ">= 0.9"
     }
   }
-
-  cloud {
-    organization = "hanztech"
-    workspaces {
-      project = "AWS Demo"
-      name    = "aws-terraform-demo-eks"
-    }
-  }
 }
 
+
 provider "aws" {
-  region = "ca-central-1" # Default region
+  region = "$TF_REGION" # set by envsubs in the template file
   allowed_account_ids  = [var.aws_allowed_account_id]
-}
-
-provider "aws" {
-  alias  = "us-west-2"
-  region = "us-west-2" # Additional region
 }
