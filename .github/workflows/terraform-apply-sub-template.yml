@@ -38,21 +38,21 @@ jobs:
       - name: Copy terraform.tfvars to target directory
         run: |
           cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
-          envsubst ./${{ inputs.tf_directory }}/providers.tf > providers-tmp.tf && mv providers-tmp.tf providers.tf
-          cat ./${{ inputs.tf_directory }}/providers.tf
+          envsubst '$TF_REGION' < ./components/vpc/providers.tf > ./components/vpc/providers-tmp.tf
+          mv ./${{ inputs.tf_directory }}/providers-tmp.tf ./${{ inputs.tf_directory }}/providers.tf
 
       - name: Upload configuration to Terraform Cloud
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         id: upload
         with:
-          workspace: ${{ inputs.tf_workspace }}
+          workspace: ${{ inputs.tf_workspace }}-${{ inputs.tf_region }}
           directory: ${{ inputs.tf_directory }}
 
       - name: Create Terraform Cloud run
         uses: hashicorp/tfc-workflows-github/actions/create-run@v1.1.1
         id: create-run
         with:
-          workspace: ${{ inputs.tf_workspace }}
+          workspace: ${{ inputs.tf_workspace }}-${{ inputs.tf_region }}
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
 
       - name: Apply Terraform Cloud run

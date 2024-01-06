@@ -2,74 +2,68 @@
 # In this  script, a Bash array `regions` is created to store each extracted region. 
 #The `for` loop goes over each line in `CHANGED_FILES`, and if the file matches the pattern `deploy-vpc/dev/*/*`, it extracts the region and adds it to the `regions` array. 
 #After processing all files, the unique regions are determined by sorting the array and removing duplicates, and then they are set as the job's output.
-
+# For why we use github.event.pull_request.head.sha, see https://github.com/orgs/community/discussions/26325
 name: Template to Extract the region to deploy the infra
 
 on:
   workflow_call:
     inputs:
-      tf_directory:
-        description: 'the directory of the components'
+      tf_vars_directory:
+        description: 'the directory of the terraform variables'
         required: true
         type: string     
-
-# jobs:
-#     extract_region:
-#         runs-on: ubuntu-latest
-#         outputs:
-#         region: ${{ steps.set_region.outputs.region }}
-#         steps:
-#         - name: Checkout code
-#             uses: actions/checkout@v3
-
-#         - name: Get list of changed files and extract region
-#             id: set_region
-#             run: |
-#             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep  "^${{ inputs.tf_directory }}/")
-#             echo "Changed files: $CHANGED_FILES"
-
-#             # Extract the region from the path
-#             if [[ $CHANGED_FILES == ${{ tf_directory }}/*/*/* ]]; then
-#                 REGION=$(echo $CHANGED_FILES | cut -d'/' -f3)
-#                 echo "Extracted region: $REGION"
-#                 echo "::set-output name=region::$REGION"
-#             else
-#                 echo "No region could be extracted from the path."
-#                 echo "::set-output name=region::"
-#             fi
-#             shell: bash
-
-#         - name: Display extracted region
-#             run: |
-#             echo "Region: ${{ steps.set_region.outputs.region }}"
 
 jobs:
   extract_region:
     runs-on: ubuntu-latest
     outputs:
       regions: ${{ steps.set_regions.outputs.regions }}
+    env:
+      TF_VARS_DIRECTORY: ${{ inputs.tf_vars_directory }}  # Set the environment variable for the job
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Get list of changed files and extract regions
         id: set_regions
         run: |
-          echo "regions=()" >> $GITHUB_ENV
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep "^${{ inputs.tf_directory }}/")
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            # Setup for pull request event
+            git fetch origin ${{ github.event.pull_request.base.ref }}
+            git fetch origin ${{ github.head_ref }}
+            export BASE_REF=origin/${{ github.event.pull_request.base.ref }}
+            export HEAD_REF=origin/${{ github.head_ref }}
+          else
+            # Setup for push event
+            git fetch origin ${{ github.ref_name }}
+            export BASE_REF=$(git rev-parse ${{ github.ref_name }}^1)
+            export HEAD_REF=$(git rev-parse ${{ github.ref_name }})
+          fi
+          echo $BASE_REF
+          echo $HEAD_REF
+          echo $TF_VARS_DIRECTORY
+          CHANGED_FILES=$(git diff --name-only $BASE_REF...$HEAD_REF | grep "^$TF_VARS_DIRECTORY/")          
           echo "Changed files: $CHANGED_FILES"
 
           for FILE in $CHANGED_FILES; do
-            if [[ $FILE == ${{ tf_directory }}/*/*/* ]]; then
+            if [[ $FILE == $TF_VARS_DIRECTORY/*/*/* ]]; then
               REGION=$(echo $FILE | cut -d'/' -f3)
               echo "Extracted region: $REGION"
-              echo "regions+=($REGION)" >> $GITHUB_ENV
+              # Add the region to the array if it is not already included
+              if [[ ! " ${REGIONS[@]} " =~ " ${REGION} " ]]; then
+                REGIONS+=("$REGION")
+              fi
             fi
           done
-        shell: bash
 
-      - name: Set output with unique regions
-        run: |
-          echo "Unique regions: ${regions[*]}"
-          UNIQUE_REGIONS=$(echo "${regions[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-          echo "::set-output name=regions::$UNIQUE_REGIONS"
+          # Convert the Bash array of regions to a JSON array
+          JSON_ARRAY=$(printf '%s\n' "${REGIONS[@]}" | jq -R . | jq -s . )
+
+          # Write the JSON array to a file
+          echo "$JSON_ARRAY" > regions.json
+          echo "regions={\"regions\":[\"ca-central-1\",\"us-west-2\"]}" >> $GITHUB_OUTPUT
+          # # echo "regions=$(jq -c . < ./regions.json)" >> $GITHUB_OUTPUT
+          # cat $GITHUB_OUTPUT
+        shell: bash

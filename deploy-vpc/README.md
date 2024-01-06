@@ -1,4 +1,13 @@
-The terraform tfvars sets the variables declared in components/vpc
+The terraform tfvars sets the variables declared in components/vpc.
+
+## Folder Structure
+
+The folder structure should be as follows:
+
+``` ./ENV/AWS_REGION_NAME/terraform.tfvars ```
+
+The ```AWS_REGION_NAME``` must be the exact name of the region. 
+The ```ENV``` must be one of ```dev, stgn, prod```
 
 
 # To Fix
