@@ -1,0 +1,106 @@
+# Note: Github Actions does not support passing values using env vars when using "with". Find a workaround to avoid hardcoding the inputs values twice.
+# Note: Github Actions does not support subfolders for workflows, all workflows must be in .github/workflows : https://github.com/orgs/community/discussions/10773
+# The extract_region will output a bash arrary of unique regions based on the path of files modified.
+# The the plan and apply apply uses a matrix strategy to create a new job for each region.https://docs.github.com/en/actions/using-workflows/reusing-workflows#using-a-matrix-strategy-with-a-reusable-workflow
+name: Terraform Cloud Plan and Apply 
+
+on:
+  workflow_call:
+      inputs:
+        tf_vars_directory:
+          description: 'the directory of the terraform variables'
+          required: true
+          type: string
+        tf_directory:
+            description: 'the directory of the terraform components'
+            required: true
+            type: string
+        tf_workspace_prefix:
+            description: 'the terraform cloud workspace'
+            required: true
+            type: string
+
+
+jobs:
+  extract_region:
+    runs-on: ubuntu-latest
+    outputs:
+      regions: ${{ steps.set_regions.outputs.regions }}
+    env:
+      TF_VARS_DIRECTORY: ${{ inputs.tf_vars_directory }}  # Set the environment variable for the job
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get list of changed files and extract regions
+        id: set_regions
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            # Setup for pull request event
+            git fetch origin ${{ github.event.pull_request.base.ref }}
+            git fetch origin ${{ github.head_ref }}
+            export BASE_REF=origin/${{ github.event.pull_request.base.ref }}
+            export HEAD_REF=origin/${{ github.head_ref }}
+          else
+            # Setup for push event
+            git fetch origin ${{ github.ref_name }}
+            export BASE_REF=$(git rev-parse ${{ github.ref_name }}^1)
+            export HEAD_REF=$(git rev-parse ${{ github.ref_name }})
+          fi
+          echo $BASE_REF
+          echo $HEAD_REF
+          echo $TF_VARS_DIRECTORY
+          CHANGED_FILES=$(git diff --name-only $BASE_REF...$HEAD_REF | grep "^$TF_VARS_DIRECTORY/")          
+          echo "Changed files: $CHANGED_FILES"
+
+          for FILE in $CHANGED_FILES; do
+            if [[ $FILE == $TF_VARS_DIRECTORY/*/*/* ]]; then
+              REGION=$(echo $FILE | cut -d'/' -f3)
+              echo "Extracted region: $REGION"
+              # Add the region to the array if it is not already included
+              if [[ ! " ${REGIONS[@]} " =~ " ${REGION} " ]]; then
+                REGIONS+=("$REGION")
+              fi
+            fi
+          done
+
+          # Convert the Bash array of regions to a JSON array
+          JSON_ARRAY=$(printf '%s\n' "${REGIONS[@]}" | jq -Rc . | jq -cs . )
+
+          echo "regions=$JSON_ARRAY" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
+        shell: bash
+
+  # Only plan when there's a pull request against the main branch
+  plan:
+    needs: extract_region
+    if: ${{ github.event_name == 'pull_request' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJson(needs.extract_region.outputs.regions) }}
+    uses: ./.github/workflows/terraform-plan-template.yml
+    with:
+      tf_workspace_prefix: ${{ inputs.tf_workspace_prefix }}
+      tf_directory: ${{ inputs.tf_directory }}
+      tf_vars_directory_prefix: ${{ inputs.tf_vars_directory }}
+      tf_region: ${{ matrix.region }}
+    secrets: inherit
+
+  #Only apply when there's a push to the main branch
+  apply:
+    needs: extract_region
+    if: ${{ github.event_name == 'push' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJson(needs.extract_region.outputs.regions) }}
+    uses: ./.github/workflows/terraform-apply-template.yml
+    with:
+      tf_workspace_prefix: ${{ inputs.tf_workspace_prefix }}
+      tf_directory: ${{ inputs.tf_directory }}
+      tf_vars_directory_prefix: ${{ inputs.tf_vars_directory }}
+      tf_region: ${{ matrix.region }}
+    secrets: inherit

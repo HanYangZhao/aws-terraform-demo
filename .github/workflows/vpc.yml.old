@@ -1,0 +1,55 @@
+# Note: Github Actions does not support passing values using env vars when using "with". Find a workaround to avoid hardcoding the inputs values twice.
+# Note: Github Actions does not support subfolders for workflows, all workflows must be in .github/workflows : https://github.com/orgs/community/discussions/10773
+# The extract_region will output a bash arrary of unique regions based on the path of files modified.
+# The the plan_vpc and apply apply_vpc uses a matrix strategy to create a new job for each region.https://docs.github.com/en/actions/using-workflows/reusing-workflows#using-a-matrix-strategy-with-a-reusable-workflow
+name: Terraform Cloud Plan and Apply VPC
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "deploy-vpc/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "deploy-vpc/**"
+
+jobs:
+  extract_region:
+    uses: ./.github/workflows/extract-region.yml
+    with:
+      tf_vars_directory: "deploy-vpc"
+
+  # Only plan when there's a pull request against the main branch
+  plan_vpc:
+    needs: extract_region
+    if: ${{ github.event_name == 'pull_request' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        region: ${{ fromJson(needs.extract_region.outputs.regions) }}
+    uses: ./.github/workflows/terraform-plan-template.yml
+    with:
+      tf_workspace_prefix: "aws-terraform-demo-vpc"
+      tf_directory: "components/vpc"
+      tf_vars_directory_prefix: "deploy-vpc"
+      tf_region: ${{ matrix.region }}
+    secrets: inherit
+
+  # Only apply when there's a push to the main branch
+  # apply_vpc:
+  #   needs: extract_region
+  #   if: ${{ github.event_name == 'push' }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       region: ${{ fromJson(needs.extract_region.outputs.regions) }}
+  #   uses: ./.github/workflows/terraform-apply-template.yml
+  #   with:
+  #     tf_workspace_prefix: "aws-terraform-demo-vpc"
+  #     tf_directory: "components/vpc"
+  #     tf_vars_directory_prefix: "deploy-vpc"
+  #     tf_region: ${{ matrix.region }}
+  #   secrets: inherit
