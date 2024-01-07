@@ -56,10 +56,8 @@ jobs:
           echo "Changed files: $CHANGED_FILES"
 
           for FILE in $CHANGED_FILES; do
-            if [[ $FILE == $TF_VARS_DIRECTORY/*/* ]]; then
-              FILENAME_WITH_EXTENSION=$(basename "$FILE")
-              REGION="${FILENAME_WITH_EXTENSION%.*}"
-              #REGION=$(echo $FILE | cut -d'/' -f3)
+            if [[ $FILE == $TF_VARS_DIRECTORY/*/*/* ]]; then
+              REGION=$(echo $FILE | cut -d'/' -f3)
               echo "Extracted region: $REGION"
               # Add the region to the array if it is not already included
               if [[ ! " ${REGIONS[@]} " =~ " ${REGION} " ]]; then
