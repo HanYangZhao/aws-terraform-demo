@@ -1,36 +1,19 @@
-# Note: Github Actions does not support passing values using env vars when using "with". Find a workaround to avoid hardcoding the inputs values twice.
-# Note: Github Actions does not support subfolders for workflows, all workflows must be in .github/workflows : https://github.com/orgs/community/discussions/10773
-name: Terraform Cloud Plan and Apply eks
-
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "deploy-eks/**"
-  push:
-    branches:
-      - main
-    paths:
-      - "deploy-eks/**"
-
+    pull_request:
+      branches:
+        - main
+      paths:
+        - "deploy-eks/**"
+    push:
+      branches:
+        - main
+      paths:
+        - "deploy-eks/**"
 jobs:
-  # Only plan when there's a pull request against the main branch
-  plan_eks:
-    if: ${{ github.event_name == 'pull_request' }}
-    uses: ./.github/workflows/terraform-plan-template.yml
+  eks:
+    uses: ./.github/workflows/main-template.yml
     with:
-      tf_workspace_prefix: "aws-terraform-demo-eks"
+      tf_vars_directory: "deploy-eks"
       tf_directory: "components/eks"
-      tf_vars_directory_prefix: "deploy-eks"
-    secrets: inherit
-
-  # Only apply when there's a push to the main branch
-  apply_eks:
-    if: ${{ github.event_name == 'push' }}
-    uses: ./.github/workflows/terraform-apply-template.yml
-    with:
       tf_workspace_prefix: "aws-terraform-demo-eks"
-      tf_directory: "components/eks"
-      tf_vars_directory_prefix: "deploy-eks"
     secrets: inherit

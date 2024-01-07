@@ -22,7 +22,11 @@ on:
       tf_vars_directory_prefix:
         description: 'prefix for the directory of the tfvars'
         required: true
-        type: string   
+        type: string
+      tf_region:
+        description: 'aws region'
+        required: true
+        type: string
 
 jobs:
   check_for_changes:
@@ -39,11 +43,11 @@ jobs:
           list-files: shell
           filters: |
             dev:
-              - ${{ inputs.tf_vars_directory_prefix }}/dev/*.tfvars
+              - ${{ inputs.tf_vars_directory_prefix }}/dev/${{ inputs.tf_region }}/*.tfvars
             stgn:
-              - ${{ inputs.tf_vars_directory_prefix }}/stgn/*.tfvars
+              - ${{ inputs.tf_vars_directory_prefix }}/stgn/${{ inputs.tf_region }}/*.tfvars
             prod:
-              - ${{ inputs.tf_vars_directory_prefix }}/prod/*.tfvars
+              - ${{ inputs.tf_vars_directory_prefix }}/prod/${{ inputs.tf_region }}/*.tfvars
 
   terraform_plan_dev:
     needs: check_for_changes
@@ -52,8 +56,9 @@ jobs:
     with:
       tf_workspace: ${{ inputs.tf_workspace_prefix }}-dev
       tf_directory: ${{ inputs.tf_directory }}
-      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/dev 
+      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/dev/${{ inputs.tf_region }}
       tf_var_aws_allowed_account_id:  ${{ vars.TF_VAR_AWS_ALLOWED_ACCOUNT_ID_DEV }}
+      tf_region : ${{ inputs.tf_region }}
     secrets: inherit
 
   terraform_plan_stgn:
@@ -63,8 +68,9 @@ jobs:
     with:
       tf_workspace: ${{ inputs.tf_workspace_prefix }}-stgn
       tf_directory: ${{ inputs.tf_directory }}
-      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/stgn 
+      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/stgn/${{ inputs.tf_region }}
       tf_var_aws_allowed_account_id:  ${{ vars.TF_VAR_AWS_ALLOWED_ACCOUNT_ID_STGN }}
+      tf_region : ${{ inputs.tf_region }}
     secrets: inherit
 
   terraform_plan_prod:
@@ -74,6 +80,7 @@ jobs:
     with:
       tf_workspace: ${{ inputs.tf_workspace_prefix }}-prod
       tf_directory: ${{ inputs.tf_directory }}
-      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/prod 
+      tf_vars_directory: ${{ inputs.tf_vars_directory_prefix }}/prod/${{ inputs.tf_region }}
       tf_var_aws_allowed_account_id:  ${{ vars.TF_VAR_AWS_ALLOWED_ACCOUNT_ID_PROD }}
+      tf_region : ${{ inputs.tf_region }}
     secrets: inherit

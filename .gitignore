@@ -2,3 +2,4 @@
 **/.terraform.lock.hcl
 components/**/terraform.tfvars
 .DS_Store
+**/tf_cloud_config.tf

@@ -21,7 +21,10 @@ on:
         description: 'The account ids terraform is allowed to operate on'
         required: true
         type: string
-      
+      tf_region:
+        description: 'aws region'
+        required: true
+        type: string
 
 jobs:
   terraform-cloud-plan:
@@ -31,20 +34,22 @@ jobs:
       TF_CLOUD_ORGANIZATION: ${{ secrets.TF_CLOUD_ORG }}
       TF_VAR_aws_allowed_account_id : ${{ inputs.tf_var_aws_allowed_account_id }}
       # TF_MAX_TIMEOUT: "30m" ## If you wish to override the default "1h"
+      TF_REGION: ${{ inputs.tf_region }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Copy terraform.tfvars to target directory
+      - name: Copy terraform.tfvars to target directory, set correct region
         run: |
           cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
-          ls -la ./${{ inputs.tf_directory }}
+          envsubst '$TF_REGION' < ./components/vpc/providers.tf > ./components/vpc/providers-tmp.tf
+          mv ./${{ inputs.tf_directory }}/providers-tmp.tf ./${{ inputs.tf_directory }}/providers.tf
 
       - name: Upload configuration to Terraform Cloud
         uses: hashicorp/tfc-workflows-github/actions/upload-configuration@v1.1.1
         id: upload
         with:
-          workspace: ${{ inputs.tf_workspace }}
+          workspace: ${{ inputs.tf_workspace }}-${{ inputs.tf_region }}
           directory: ${{ inputs.tf_directory }}
           speculative: true
 
@@ -53,7 +58,7 @@ jobs:
         id: run
         continue-on-error: true
         with:
-          workspace: ${{ inputs.tf_workspace }}
+          workspace: ${{ inputs.tf_workspace }}-${{ inputs.tf_region }}
           configuration_version: ${{ steps.upload.outputs.configuration_version_id }}
           plan_only: true
           message: "Triggered From GitHub Actions CI ${{ github.sha }}"

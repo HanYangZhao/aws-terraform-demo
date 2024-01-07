@@ -43,7 +43,7 @@ https://developer.hashicorp.com/terraform/cloud-docs/run/cli
 ![Alt text here](diagrams/folder_structure.svg)
 
 
-* The repository is structured to facilitate the deployment of various resource types, organized into folders named `deploy-xx` where `xx` corresponds to different types of resources. These folders contain `.tfvars` files that are used to configure the resources, and the resource configurations are neatly arranged in a map for better organization and readability.
+* The repository is structured to facilitate the deployment of various resource types, organized into folders named `deploy-xx` where `xx` corresponds to different types of resources. These folders contain subfolders for each deployment region which themselves contain `.tfvars` files that are used to configure the resources, and the resource configurations are neatly arranged in a map for better organization and readability.
 
 * In the `components` folder, you'll find the Terraform modules necessary for deployment. These modules reference external Git repositories through data sources to pull in the base resource configurations. It's important to note that the `providers.tf` file within the `components` folder specifies the required version of the AWS provider. To ensure smooth deployments, the external Git repositories that the modules reference should use tags that match the AWS provider version specified.
 
@@ -59,6 +59,7 @@ https://developer.hashicorp.com/terraform/cloud-docs/run/cli
     * Adds complexity if you intend to organized multiple types of cloud resources in a "solution" (multiple type of resources managed at the same time as a part of a solution). It's more diffucult to make a tag on a specific release version of the infra for a specfic solution.
     * Upgrade and maintenance of child modules can become a problem in the long run with multiple versions. In a centralized repo all components must be up to date with modules with one single source of truth.
     * Each TFC workspace holds one tfstate for each env, so there could be lots of tfstate.
+    * Dependencies between different components must be manually managed. 
 
 
 
