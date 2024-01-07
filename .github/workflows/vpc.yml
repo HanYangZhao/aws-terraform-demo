@@ -13,8 +13,9 @@ on:
 
 jobs:
   vpc:
-    uses: ./.github/workflows/main.yml
+    uses: ./.github/workflows/main-template.yml
     with:
       tf_vars_directory: "deploy-vpc"
       tf_directory: "components/vpc"
       tf_workspace_prefix: "aws-terraform-demo-vpc"
+    secrets: inherit

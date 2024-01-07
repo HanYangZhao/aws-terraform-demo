@@ -1,0 +1,19 @@
+on:
+    pull_request:
+      branches:
+        - main
+      paths:
+        - "deploy-eks/**"
+    push:
+      branches:
+        - main
+      paths:
+        - "deploy-eks/**"
+jobs:
+  eks:
+    uses: ./.github/workflows/main-template.yml
+    with:
+      tf_vars_directory: "deploy-eks"
+      tf_directory: "components/eks"
+      tf_workspace_prefix: "aws-terraform-demo-eks"
+    secrets: inherit
