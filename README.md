@@ -8,7 +8,7 @@ This repo contains example terraform code and github actions workflow needed to 
 - [x] Add deployement for VPC
 - [x] Add deployement for EKS
 - [x] Seperate AWS accounts support for dev/stgn/prod
-- [ ] Multi Region support?
+- [x] Multi Region support?
 - [ ] Explore TF json format for automation and templating purpose
 - [ ] Add deployment for Kubernetes (namespace, ingress, IAM....). Find a workaround for the providers alias not able to use variables
 - [ ] Add component and deployement for DB
@@ -24,10 +24,43 @@ This repo contains example terraform code and github actions workflow needed to 
     * TF_CLOUD_ORGANIZATION
 * Add the following repository secret
     * TF_API_TOKEN
-* Create a worksapce in Terraform Cloud for each type of resources you wish to deploy (VPC,EKS...)
+
+#### Create a new workspace in TF cloud
+Create a worksapce in Terraform Cloud for each type of resources you wish to deploy (VPC,EKS...). The naming convention should be similar to ```aws-terraform-demo-vpc-ENV-AWS_REGION```. You'll need a sperate workspace for each ENV as well as each AWS_REGION. So for 2 regions you'll need 6 workspaces
+
+#### Add a new component 
+
+Create a new subfolder under ./components. There needs to be 4 files. 
+```
+main.tf
+outputs.tf
+providers.tf
+variables.tf
+```
+In providers.tf the default provider for aws should be 
+
+```
+provider "aws" {
+  region = "$TF_REGION" # set by envsubst in the template file
+  allowed_account_ids  = [var.aws_allowed_account_id]
+}
+```
+
+Create a new subfolder called deploy-XX under the root. Create a subfolder deploy-XX for each deployment region (ie. deploy-XX/ca-central-1). Add the terraform.tfvars file.
 
 
-* You can have a seperate AWS accounts associated to dev/stgn/prod. Add the following to the github repository variables. The value is the account number
+#### Add a new pipeline
+
+Clone the values of VPC.yml to a new yml file. Modify the 3 inputs variables to fit your new component and deployment
+```
+tf_vars_directory: "deploy-xx"
+tf_directory: "components/xx"
+tf_workspace_prefix: "aws-terraform-demo-xx"
+```
+
+#### Seperate AWS accounts for DEV/STGN/PROD
+
+You can have a seperate AWS accounts associated to dev/stgn/prod. Add the following to the github repository variables. The value is the account number
 
 ```
 TF_VARS_AWS_ALLOWED_ACCOUNTS_IDS_DEV
