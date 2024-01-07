@@ -41,8 +41,8 @@ jobs:
 
       - name: Copy terraform.tfvars to target directory, set correct region
         run: |
-          cp ./${{ inputs.tf_vars_directory }}/${{ inputs.tf_region }}.tfvars ./${{ inputs.tf_directory }}
-          envsubst '$TF_REGION' < ./${{ inputs.tf_directory }}/providers.tf > ./${{ inputs.tf_directory }}/providers-tmp.tf
+          cp ./${{ inputs.tf_vars_directory }}/terraform.tfvars ./${{ inputs.tf_directory }}
+          envsubst '$TF_REGION' < ./components/vpc/providers.tf > ./components/vpc/providers-tmp.tf
           mv ./${{ inputs.tf_directory }}/providers-tmp.tf ./${{ inputs.tf_directory }}/providers.tf
 
       - name: Upload configuration to Terraform Cloud
