@@ -14,6 +14,7 @@ This repo contains example terraform code and github actions workflow needed to 
 - [ ] Add component and deployement for DB
 - [ ] Integration with terragrunt? (It seems complicated to get it work with both github actions and TF cloud)
 - [ ] Refactor the github actions so we don't need a seperate yml for each component. Find workaround for github actions limitations
+- [ ] Use git tags (#ref...) on the modules used in data_source
 
 
 ## Setup
