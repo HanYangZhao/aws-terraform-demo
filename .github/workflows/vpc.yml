@@ -18,59 +18,9 @@ on:
 
 jobs:
   extract_region:
-    runs-on: ubuntu-latest
-    outputs:
-      regions: ${{ steps.set_regions.outputs.regions }}
-    env:
-      TF_VARS_DIRECTORY: 'deploy-vpc'  # Set the environment variable for the job
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Get list of changed files and extract regions
-        id: set_regions
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            # Setup for pull request event
-            git fetch origin ${{ github.event.pull_request.base.ref }}
-            git fetch origin ${{ github.head_ref }}
-            export BASE_REF=origin/${{ github.event.pull_request.base.ref }}
-            export HEAD_REF=origin/${{ github.head_ref }}
-          else
-            # Setup for push event
-            git fetch origin ${{ github.ref_name }}
-            export BASE_REF=$(git rev-parse ${{ github.ref_name }}^1)
-            export HEAD_REF=$(git rev-parse ${{ github.ref_name }})
-          fi
-          echo $BASE_REF
-          echo $HEAD_REF
-          echo $TF_VARS_DIRECTORY
-          CHANGED_FILES=$(git diff --name-only $BASE_REF...$HEAD_REF | grep "^$TF_VARS_DIRECTORY/")          
-          echo "Changed files: $CHANGED_FILES"
-
-          for FILE in $CHANGED_FILES; do
-            if [[ $FILE == $TF_VARS_DIRECTORY/*/*/* ]]; then
-              REGION=$(echo $FILE | cut -d'/' -f3)
-              echo "Extracted region: $REGION"
-              # Add the region to the array if it is not already included
-              if [[ ! " ${REGIONS[@]} " =~ " ${REGION} " ]]; then
-                REGIONS+=("$REGION")
-              fi
-            fi
-          done
-
-          # Convert the Bash array of regions to a JSON array
-          JSON_ARRAY=$(printf '%s\n' "${REGIONS[@]}" | jq -Rc . | jq -cs . )
-          
-          # Write the JSON array to a file
-          echo "$JSON_ARRAY" > regions.json
-          echo "regions=$JSON_ARRAY" >> $GITHUB_OUTPUT
-          # echo "regions=[\"ca-central-1\",\"us-west-2\"]" >> $GITHUB_OUTPUT
-          # # echo "regions=$(jq -c . < ./regions.json)" >> $GITHUB_OUTPUT
-          cat $GITHUB_OUTPUT
-        shell: bash
+    uses: ./.github/workflows/extract-region.yml
+    with:
+      tf_vars_directory: "deploy-vpc"
 
   # Only plan when there's a pull request against the main branch
   plan_vpc:
@@ -80,9 +30,6 @@ jobs:
       fail-fast: false
       matrix:
         region: ${{ fromJson(needs.extract_region.outputs.regions) }}
-        # region: ${{ fromJSON('\"regions\":[\"ca-central-1\",\"us-west-2\"]') }}
-        # region: [ca-central-1,us-west-2]
-
     uses: ./.github/workflows/terraform-plan-template.yml
     with:
       tf_workspace_prefix: "aws-terraform-demo-vpc"
@@ -103,6 +50,6 @@ jobs:
   #   with:
   #     tf_workspace_prefix: "aws-terraform-demo-vpc"
   #     tf_directory: "components/vpc"
-  #     tf_vars_directory_prefix: "deploy-vpc/"
+  #     tf_vars_directory_prefix: "deploy-vpc"
   #     tf_region: ${{ matrix.region }}
   #   secrets: inherit

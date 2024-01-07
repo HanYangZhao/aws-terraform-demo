@@ -59,11 +59,8 @@ jobs:
           done
 
           # Convert the Bash array of regions to a JSON array
-          JSON_ARRAY=$(printf '%s\n' "${REGIONS[@]}" | jq -R . | jq -s . )
+          JSON_ARRAY=$(printf '%s\n' "${REGIONS[@]}" | jq -Rc . | jq -cs . )
 
-          # Write the JSON array to a file
-          echo "$JSON_ARRAY" > regions.json
-          echo "regions={\"regions\":[\"ca-central-1\",\"us-west-2\"]}" >> $GITHUB_OUTPUT
-          # # echo "regions=$(jq -c . < ./regions.json)" >> $GITHUB_OUTPUT
-          # cat $GITHUB_OUTPUT
+          echo "regions=$JSON_ARRAY" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
         shell: bash
