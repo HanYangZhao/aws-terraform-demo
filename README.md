@@ -99,6 +99,16 @@ https://developer.hashicorp.com/terraform/cloud-docs/run/cli
 
 
 ## Deployment flow
+Deployment uses pull request to trigger build pipelines using Terraform Cloud. Terraform change output will be added to the comments of the pull request
 ![Alt text here](diagrams/deployment_flow.svg)
 
-* Deployment uses pull request to tigger build pipelines using Terraform Cloud. Terraform change output will be added to the comments of the pull request
+
+1. A pull request trigger a Github action workflow
+2. The modified .tfvars file is copied to the components folder
+3. The AWS provider region is injected to the component
+4. The github action workflow called Terraform cloud to run a plan or apply job
+5. Terraform cloud connects to AWS using Dynamic Credentials
+6. Terraform Cloud cconnects with AWS provider API
+7. The infra changes are applied in AWS
+8. A new tfstate is generated 
+9. The proposed changes are posted in the pull request comments 
